@@ -91,3 +91,70 @@ async def edit_image(
         aspect_ratio=aspect_ratio,
         resolution=resolution
     )
+
+def generate_mock_video(prompt: str, aspect_ratio: str = '16:9', duration: str = '5s') -> tuple:
+    """Generate a mock video when Veo3 API is not available."""
+
+    ratios = {
+        '16:9': (640, 360),
+        '9:16': (360, 640),
+    }
+
+    width, height = ratios.get(aspect_ratio, (640, 360))
+    duration_seconds = 5 if duration == '5s' else 8
+    fps = 24
+    total_frames = duration_seconds * fps
+
+    colors = [
+        (255, 182, 193),
+        (255, 218, 185),
+        (176, 224, 230),
+        (221, 160, 221),
+        (144, 238, 144),
+    ]
+
+    base_color = random.choice(colors)
+    accent_color = random.choice(colors)
+
+    frames = []
+    for frame_num in range(total_frames):
+        img = Image.new('RGB', (width, height))
+        pixels = img.load()
+        progress = frame_num / total_frames
+
+        for y in range(height):
+            for x in range(width):
+                ratio = ((x + y) / (width + height) + progress) % 1.0
+                r = int(base_color[0] * (1 - ratio) + accent_color[0] * ratio)
+                g = int(base_color[1] * (1 - ratio) + accent_color[1] * ratio)
+                b = int(base_color[2] * (1 - ratio) + accent_color[2] * ratio)
+                pixels[x, y] = (r, g, b)
+
+        frames.append(img)
+
+    buffer = io.BytesIO()
+    frames[0].save(
+        buffer,
+        format='GIF',
+        save_all=True,
+        append_images=frames[1:],
+        duration=int(1000/fps),
+        loop=0
+    )
+
+    return buffer.getvalue(), f"Mock video generated for prompt: {prompt[:100]}..."
+
+async def generate_video(
+    prompt: str,
+    model: str = 'veo-3.0-generate-preview',
+    aspect_ratio: str = '16:9',
+    duration: str = '5s'
+) -> dict:
+    """Generate a video using Veo3 API or mock if not available."""
+
+    video_data, text_response = generate_mock_video(prompt, aspect_ratio, duration)
+    return {
+        'video_data': video_data,
+        'text_response': text_response,
+        'is_mock': True
+    }

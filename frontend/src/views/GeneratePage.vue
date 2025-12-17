@@ -1,25 +1,47 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useImagesStore } from '../stores/images'
 import { useSettingsStore } from '../stores/settings'
 
 const imagesStore = useImagesStore()
 const settingsStore = useSettingsStore()
 
+const mediaType = ref<'image' | 'video'>('image')
 const prompt = ref('')
 const model = ref('gemini-2.5-flash-image')
 const aspectRatio = ref('1:1')
 const resolution = ref('1K')
 const responseModality = ref('TEXT_IMAGE')
 const googleSearchEnabled = ref(false)
+const duration = ref('5s')
 const generatedImage = ref<any>(null)
+const generatedVideo = ref<any>(null)
 
-const aspectRatios = ['1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9']
+const imageAspectRatios = ['1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9']
+const videoAspectRatios = ['16:9', '9:16']
 const resolutions = ['1K', '2K', '4K']
-const models = [
+const durations = ['5s', '8s']
+const imageModels = [
   { value: 'gemini-2.5-flash-image', label: 'Gemini Flash (Fast, 1K)' },
   { value: 'gemini-3-pro-image-preview', label: 'Gemini Pro (Advanced, up to 4K)' }
 ]
+const videoModels = [
+  { value: 'veo-3.0-generate-preview', label: 'Veo 3.0 (Preview)' }
+]
+
+const currentAspectRatios = computed(() => mediaType.value === 'image' ? imageAspectRatios : videoAspectRatios)
+const currentModels = computed(() => mediaType.value === 'image' ? imageModels : videoModels)
+
+function switchMediaType(type: 'image' | 'video') {
+  mediaType.value = type
+  if (type === 'video') {
+    model.value = 'veo-3.0-generate-preview'
+    aspectRatio.value = '16:9'
+  } else {
+    model.value = settingsStore.settings.default_model || 'gemini-2.5-flash-image'
+    aspectRatio.value = settingsStore.settings.default_aspect_ratio || '1:1'
+  }
+}
 
 onMounted(async () => {
   await settingsStore.fetchSettings()
@@ -34,17 +56,32 @@ onMounted(async () => {
 async function generate() {
   if (!prompt.value.trim()) return
 
-  const result = await imagesStore.generateImage({
-    prompt: prompt.value,
-    model: model.value,
-    aspect_ratio: aspectRatio.value,
-    resolution: resolution.value,
-    response_modality: responseModality.value,
-    google_search_enabled: googleSearchEnabled.value
-  })
+  if (mediaType.value === 'image') {
+    const result = await imagesStore.generateImage({
+      prompt: prompt.value,
+      model: model.value,
+      aspect_ratio: aspectRatio.value,
+      resolution: resolution.value,
+      response_modality: responseModality.value,
+      google_search_enabled: googleSearchEnabled.value
+    })
 
-  if (result) {
-    generatedImage.value = result
+    if (result) {
+      generatedImage.value = result
+      generatedVideo.value = null
+    }
+  } else {
+    const result = await imagesStore.generateVideo({
+      prompt: prompt.value,
+      model: model.value,
+      aspect_ratio: aspectRatio.value,
+      duration: duration.value
+    })
+
+    if (result) {
+      generatedVideo.value = result
+      generatedImage.value = null
+    }
   }
 }
 
@@ -56,12 +93,27 @@ function useTemplate(template: string) {
 <template>
   <div class="generate-page">
     <div class="page-header">
-      <h1>Generate Image</h1>
-      <p>Create stunning AI-generated images with Nano Banana</p>
+      <h1>Generate {{ mediaType === 'image' ? 'Image' : 'Video' }}</h1>
+      <p>Create stunning AI-generated {{ mediaType === 'image' ? 'images' : 'videos' }} with Nano Banana</p>
     </div>
 
     <div class="generate-container">
       <div class="form-section">
+        <div class="media-toggle">
+          <button
+            :class="['toggle-btn', { active: mediaType === 'image' }]"
+            @click="switchMediaType('image')"
+          >
+            Image
+          </button>
+          <button
+            :class="['toggle-btn', { active: mediaType === 'video' }]"
+            @click="switchMediaType('video')"
+          >
+            Video
+          </button>
+        </div>
+
         <div class="form-group">
           <label>Prompt</label>
           <textarea
@@ -90,7 +142,7 @@ function useTemplate(template: string) {
           <div class="form-group">
             <label>Model</label>
             <select v-model="model" class="select-input">
-              <option v-for="m in models" :key="m.value" :value="m.value">
+              <option v-for="m in currentModels" :key="m.value" :value="m.value">
                 {{ m.label }}
               </option>
             </select>
@@ -99,18 +151,25 @@ function useTemplate(template: string) {
           <div class="form-group">
             <label>Aspect Ratio</label>
             <select v-model="aspectRatio" class="select-input">
-              <option v-for="ar in aspectRatios" :key="ar" :value="ar">{{ ar }}</option>
+              <option v-for="ar in currentAspectRatios" :key="ar" :value="ar">{{ ar }}</option>
             </select>
           </div>
 
-          <div class="form-group">
+          <div class="form-group" v-if="mediaType === 'image'">
             <label>Resolution</label>
             <select v-model="resolution" class="select-input" :disabled="model !== 'gemini-3-pro-image-preview'">
               <option v-for="res in resolutions" :key="res" :value="res">{{ res }}</option>
             </select>
           </div>
 
-          <div class="form-group">
+          <div class="form-group" v-if="mediaType === 'video'">
+            <label>Duration</label>
+            <select v-model="duration" class="select-input">
+              <option v-for="d in durations" :key="d" :value="d">{{ d }}</option>
+            </select>
+          </div>
+
+          <div class="form-group" v-if="mediaType === 'image'">
             <label>Response Mode</label>
             <select v-model="responseModality" class="select-input">
               <option value="TEXT_IMAGE">Text + Image</option>
@@ -119,7 +178,7 @@ function useTemplate(template: string) {
           </div>
         </div>
 
-        <div class="form-group checkbox-group">
+        <div class="form-group checkbox-group" v-if="mediaType === 'image'">
           <label class="checkbox-label">
             <input
               type="checkbox"
@@ -136,17 +195,17 @@ function useTemplate(template: string) {
           class="generate-btn"
         >
           <span v-if="imagesStore.loading" class="spinner"></span>
-          <span v-else>Generate Image</span>
+          <span v-else>Generate {{ mediaType === 'image' ? 'Image' : 'Video' }}</span>
         </button>
       </div>
 
       <div class="result-section">
         <div v-if="imagesStore.loading" class="loading-state">
           <div class="loading-spinner"></div>
-          <p>Generating your image...</p>
+          <p>Generating your {{ mediaType }}...</p>
         </div>
 
-        <div v-else-if="generatedImage" class="result-display">
+        <div v-else-if="generatedImage && mediaType === 'image'" class="result-display">
           <img :src="generatedImage.image_url" :alt="generatedImage.prompt" class="result-image" />
           <div class="result-meta">
             <h3>Generated Image</h3>
@@ -167,9 +226,23 @@ function useTemplate(template: string) {
           </div>
         </div>
 
+        <div v-else-if="generatedVideo && mediaType === 'video'" class="result-display">
+          <img :src="generatedVideo.video_url" :alt="generatedVideo.prompt" class="result-video" />
+          <div class="result-meta">
+            <h3>Generated Video</h3>
+            <p><strong>Prompt:</strong> {{ generatedVideo.prompt }}</p>
+            <p><strong>Model:</strong> {{ generatedVideo.model }}</p>
+            <p><strong>Aspect Ratio:</strong> {{ generatedVideo.aspect_ratio }}</p>
+            <p><strong>Duration:</strong> {{ generatedVideo.duration }}</p>
+            <div class="result-actions">
+              <a :href="generatedVideo.video_url" download class="action-btn">Download</a>
+            </div>
+          </div>
+        </div>
+
         <div v-else class="empty-state">
-          <div class="empty-icon">🎨</div>
-          <p>Your generated image will appear here</p>
+          <div class="empty-icon">{{ mediaType === 'image' ? '🎨' : '🎬' }}</div>
+          <p>Your generated {{ mediaType }} will appear here</p>
         </div>
       </div>
     </div>
@@ -207,6 +280,38 @@ function useTemplate(template: string) {
   border-radius: 16px;
   padding: 1.5rem;
   border: 1px solid #2d2d44;
+}
+
+.media-toggle {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  background: #0f0f1a;
+  padding: 0.25rem;
+  border-radius: 12px;
+}
+
+.toggle-btn {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.toggle-btn.active {
+  background: linear-gradient(135deg, #ffd93d 0%, #ff9900 100%);
+  color: #1a1a2e;
+}
+
+.toggle-btn:not(.active):hover {
+  background: #2d2d44;
+  color: #e2e8f0;
 }
 
 .form-group {
@@ -357,7 +462,7 @@ function useTemplate(template: string) {
   flex-direction: column;
 }
 
-.result-image {
+.result-image, .result-video {
   width: 100%;
   border-radius: 12px;
   margin-bottom: 1rem;

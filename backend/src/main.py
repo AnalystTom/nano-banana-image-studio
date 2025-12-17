@@ -4,8 +4,12 @@ from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 import os
 
+from pathlib import Path
+
 from .database import init_db
 from .routers import generate, sessions, images, settings, templates
+
+BASE_DIR = Path(__file__).parent.parent
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -27,9 +31,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-static_dir = "/home/user/backend/static"
-os.makedirs(f"{static_dir}/images", exist_ok=True)
-app.mount("/static", StaticFiles(directory=static_dir), name="static")
+static_dir = BASE_DIR / "static"
+(static_dir / "images").mkdir(parents=True, exist_ok=True)
+app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 app.include_router(generate.router)
 app.include_router(sessions.router)

@@ -1,12 +1,14 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { Image } from '../types'
+import type { Image, Video } from '../types'
 import { imagesApi, generateApi } from '../services/api'
-import type { GenerateRequest, EditRequest } from '../types'
+import type { GenerateRequest, EditRequest, VideoGenerateRequest } from '../types'
 
 export const useImagesStore = defineStore('images', () => {
   const images = ref<Image[]>([])
+  const videos = ref<Video[]>([])
   const currentImage = ref<Image | null>(null)
+  const currentVideo = ref<Video | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
 
@@ -79,15 +81,34 @@ export const useImagesStore = defineStore('images', () => {
     }
   }
 
+  async function generateVideo(request: VideoGenerateRequest) {
+    loading.value = true
+    error.value = null
+    try {
+      const response = await generateApi.generateVideo(request)
+      videos.value.unshift(response.data)
+      currentVideo.value = response.data
+      return response.data
+    } catch (e: any) {
+      error.value = e.message || 'Failed to generate video'
+      return null
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     images,
+    videos,
     currentImage,
+    currentVideo,
     loading,
     error,
     fetchImages,
     fetchImage,
     generateImage,
     editImage,
-    deleteImage
+    deleteImage,
+    generateVideo
   }
 })

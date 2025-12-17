@@ -85,3 +85,20 @@ class TemplateResponse(BaseModel):
     template: str
     description: Optional[str]
     created_at: str
+
+class VideoGenerateRequest(BaseModel):
+    prompt: str
+    model: str = 'veo-3.0-generate-preview'
+    aspect_ratio: str = '16:9'
+    duration: str = '5s'
+    session_id: Optional[int] = None
+
+class VideoResponse(BaseModel):
+    id: int
+    filename: str
+    video_url: str
+    prompt: str
+    model: str
+    aspect_ratio: str
+    duration: str
+    created_at: str

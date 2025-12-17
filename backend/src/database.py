@@ -1,7 +1,7 @@
 import aiosqlite
 from pathlib import Path
 
-DATABASE_PATH = Path('/home/user/backend/database.db')
+DATABASE_PATH = Path(__file__).parent.parent / 'database.db'
 
 async def get_db():
     db = await aiosqlite.connect(DATABASE_PATH)
@@ -82,6 +82,19 @@ async def init_db():
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (original_image_id) REFERENCES images(id) ON DELETE CASCADE,
                 FOREIGN KEY (edited_image_id) REFERENCES images(id) ON DELETE CASCADE
+            );
+
+            CREATE TABLE IF NOT EXISTS videos (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id INTEGER,
+                filename TEXT NOT NULL,
+                file_path TEXT NOT NULL,
+                prompt TEXT NOT NULL,
+                model TEXT NOT NULL,
+                aspect_ratio TEXT NOT NULL DEFAULT '16:9',
+                duration TEXT NOT NULL DEFAULT '5s',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
             );
 
             INSERT OR IGNORE INTO settings (id) VALUES (1);

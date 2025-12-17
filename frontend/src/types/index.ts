@@ -64,3 +64,22 @@ export interface EditRequest {
   aspect_ratio?: string
   resolution?: string
 }
+
+export interface Video {
+  id: number
+  filename: string
+  video_url: string
+  prompt: string
+  model: string
+  aspect_ratio: string
+  duration: string
+  created_at: string
+}
+
+export interface VideoGenerateRequest {
+  prompt: string
+  model: string
+  aspect_ratio: string
+  duration: string
+  session_id?: number
+}

@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { Image, Session, ConversationMessage, Settings, Template, GenerateRequest, EditRequest } from '../types'
+import type { Image, Session, ConversationMessage, Settings, Template, GenerateRequest, EditRequest, Video, VideoGenerateRequest } from '../types'
 
 const api = axios.create({
   baseURL: '/api',
@@ -10,7 +10,8 @@ const api = axios.create({
 
 export const generateApi = {
   generate: (data: GenerateRequest) => api.post<Image>('/generate', data),
-  edit: (data: EditRequest) => api.post<Image>('/edit', data)
+  edit: (data: EditRequest) => api.post<Image>('/edit', data),
+  generateVideo: (data: VideoGenerateRequest) => api.post<Video>('/generate-video', data)
 }
 
 export const sessionsApi = {
