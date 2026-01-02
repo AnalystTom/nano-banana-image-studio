@@ -2,8 +2,15 @@ import os
 from PIL import Image
 import io
 import random
+import base64
+from google import genai
 
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+
+if GEMINI_API_KEY:
+    client = genai.Client(api_key=GEMINI_API_KEY)
+else:
+    client = None
 
 def generate_mock_image(prompt: str, aspect_ratio: str = '1:1', resolution: str = '1K') -> tuple:
     """Generate a mock image when Gemini API is not available."""
@@ -152,9 +159,56 @@ async def generate_video(
 ) -> dict:
     """Generate a video using Veo3 API or mock if not available."""
 
-    video_data, text_response = generate_mock_video(prompt, aspect_ratio, duration)
-    return {
-        'video_data': video_data,
-        'text_response': text_response,
-        'is_mock': True
-    }
+    if not client:
+        video_data, text_response = generate_mock_video(prompt, aspect_ratio, duration)
+        return {
+            'video_data': video_data,
+            'text_response': text_response,
+            'is_mock': True
+        }
+
+    try:
+        # Use the real Gemini Veo3 API with the new google.genai package
+        config = {
+            'response_modalities': ['VIDEO'],
+        }
+
+        response = client.models.generate_content(
+            model=model,
+            contents=prompt,
+            config=config
+        )
+
+        # Extract video data from the response
+        if response.candidates and len(response.candidates) > 0:
+            candidate = response.candidates[0]
+            if candidate.content and candidate.content.parts:
+                video_part = candidate.content.parts[0]
+
+                if hasattr(video_part, 'inline_data') and video_part.inline_data:
+                    video_data = video_part.inline_data.data
+                    return {
+                        'video_data': video_data,
+                        'text_response': response.text if hasattr(response, 'text') else None,
+                        'is_mock': False
+                    }
+
+        # Fallback to mock if response format is unexpected
+        video_data, text_response = generate_mock_video(prompt, aspect_ratio, duration)
+        return {
+            'video_data': video_data,
+            'text_response': text_response,
+            'is_mock': True
+        }
+    except Exception as e:
+        # Fallback to mock on error
+        print(f"Error generating video with Gemini API: {e}")
+        import traceback
+        traceback.print_exc()
+        video_data, text_response = generate_mock_video(prompt, aspect_ratio, duration)
+        return {
+            'video_data': video_data,
+            'text_response': text_response,
+            'is_mock': True,
+            'error': str(e)
+        }
