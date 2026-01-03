@@ -123,7 +123,9 @@ async def create_video(request: VideoGenerateRequest, db: aiosqlite.Connection =
             duration=request.duration
         )
 
-        filename = generate_filename(extension='gif')
+        # Use mp4 for real videos, gif for mocks
+        extension = 'mp4' if not result.get('is_mock', True) else 'gif'
+        filename = generate_filename(extension=extension)
         file_path = save_video(result['video_data'], filename)
 
         cursor = await db.execute(

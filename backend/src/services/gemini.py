@@ -295,7 +295,7 @@ async def generate_video(
             )
 
             # Poll the operation until complete (with timeout)
-            max_wait_seconds = 120  # 2 minutes timeout
+            max_wait_seconds = 300  # 5 minutes timeout for Veo 3.1
             poll_interval = 5  # Check every 5 seconds
             elapsed = 0
 
@@ -315,23 +315,51 @@ async def generate_video(
                     'is_mock': True
                 }
 
+            # Check for errors in the operation
+            if operation.error:
+                print(f"Operation completed with error: {operation.error}")
+                video_data, text_response = generate_mock_video(prompt, aspect_ratio, duration)
+                return {
+                    'video_data': video_data,
+                    'text_response': f'Error: {operation.error}',
+                    'is_mock': True
+                }
+
+            print(f"Operation done! Checking result... operation.result type: {type(operation.result)}")
+            print(f"Has result attr: {hasattr(operation, 'result')}, Has response attr: {hasattr(operation, 'response')}")
+            print(f"operation.result attributes: {dir(operation.result)}")
+            if hasattr(operation.result, 'generated_videos'):
+                print(f"generated_videos exists: {operation.result.generated_videos}")
+            if hasattr(operation.result, 'videos'):
+                print(f"videos exists: {operation.result.videos}")
+
             # Extract the generated video
             if operation.response and hasattr(operation.result, 'generated_videos'):
                 generated_videos = operation.result.generated_videos
                 if generated_videos and len(generated_videos) > 0:
                     video_obj = generated_videos[0]
 
-                    # Check if video has inline data or URI
+                    # Check if video has video_bytes, inline data, or URI
                     if hasattr(video_obj, 'video') and video_obj.video:
-                        if hasattr(video_obj.video, 'inline_data') and video_obj.video.inline_data:
-                            video_data = video_obj.video.inline_data.data
-                            print(f"Video generated successfully, size: {len(video_data)} bytes")
+                        if hasattr(video_obj.video, 'video_bytes') and video_obj.video.video_bytes:
+                            # New format: video_bytes
+                            video_data = video_obj.video.video_bytes
+                            print(f"Video generated successfully (video_bytes), size: {len(video_data)} bytes, mime: {video_obj.video.mime_type}")
                             return {
                                 'video_data': video_data,
                                 'text_response': f'Video generated with Veo 3.1',
                                 'is_mock': False
                             }
-                        elif hasattr(video_obj.video, 'uri'):
+                        elif hasattr(video_obj.video, 'inline_data') and video_obj.video.inline_data:
+                            # Old format: inline_data
+                            video_data = video_obj.video.inline_data.data
+                            print(f"Video generated successfully (inline_data), size: {len(video_data)} bytes")
+                            return {
+                                'video_data': video_data,
+                                'text_response': f'Video generated with Veo 3.1',
+                                'is_mock': False
+                            }
+                        elif hasattr(video_obj.video, 'uri') and video_obj.video.uri:
                             # Video is stored in GCS, would need to download
                             print(f"Video URI: {video_obj.video.uri}")
                             video_data, text_response = generate_mock_video(prompt, aspect_ratio, duration)
@@ -341,6 +369,9 @@ async def generate_video(
                                 'is_mock': True,
                                 'video_uri': video_obj.video.uri
                             }
+                        else:
+                            print(f"Video object exists but no video_bytes, inline_data, or uri found")
+                            print(f"Video attributes: {dir(video_obj.video)}")
 
             # Fallback if unexpected response format
             print("Unexpected response format from Veo 3.1")
