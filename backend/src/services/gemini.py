@@ -16,16 +16,26 @@ GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
 GOOGLE_CLOUD_API_KEY = os.getenv('GOOGLE_CLOUD_API_KEY', '')
 GOOGLE_CLOUD_PROJECT = os.getenv('GOOGLE_CLOUD_PROJECT', '')
 GOOGLE_CLOUD_LOCATION = os.getenv('GOOGLE_CLOUD_LOCATION', 'global')
+GOOGLE_APPLICATION_CREDENTIALS = os.getenv('GOOGLE_APPLICATION_CREDENTIALS', '')
 USE_VERTEX_AI = os.getenv('GOOGLE_GENAI_USE_VERTEXAI', 'False').lower() == 'true'
 
 # Initialize client based on configuration
-if USE_VERTEX_AI and GOOGLE_CLOUD_API_KEY:
-    # Use Vertex AI client
+if USE_VERTEX_AI and GOOGLE_APPLICATION_CREDENTIALS:
+    # Use Vertex AI client with service account
+    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = GOOGLE_APPLICATION_CREDENTIALS
+    client = genai.Client(
+        vertexai=True,
+        project=GOOGLE_CLOUD_PROJECT,
+        location=GOOGLE_CLOUD_LOCATION,
+    )
+    print(f"Using Vertex AI client with service account for project: {GOOGLE_CLOUD_PROJECT}")
+elif USE_VERTEX_AI and GOOGLE_CLOUD_API_KEY:
+    # Use Vertex AI client with API key (fallback)
     client = genai.Client(
         vertexai=True,
         api_key=GOOGLE_CLOUD_API_KEY,
     )
-    print(f"Using Vertex AI client with project: {GOOGLE_CLOUD_PROJECT}")
+    print(f"Using Vertex AI client with API key for project: {GOOGLE_CLOUD_PROJECT}")
 elif GEMINI_API_KEY:
     # Use standard Gemini API client
     client = genai.Client(api_key=GEMINI_API_KEY)

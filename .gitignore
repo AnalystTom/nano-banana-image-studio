@@ -7,6 +7,10 @@ venv/
 .env
 *.db
 
+# Google Cloud credentials
+**/service-account.json
+**/*-key.json
+
 # Node
 node_modules/
 dist/
