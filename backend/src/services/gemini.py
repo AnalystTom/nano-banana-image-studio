@@ -3,14 +3,36 @@ from PIL import Image
 import io
 import random
 import base64
+import time
+from dotenv import load_dotenv
 from google import genai
+from google.genai import types
 
+# Load environment variables from .env file
+load_dotenv()
+
+# Get environment variables
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+GOOGLE_CLOUD_API_KEY = os.getenv('GOOGLE_CLOUD_API_KEY', '')
+GOOGLE_CLOUD_PROJECT = os.getenv('GOOGLE_CLOUD_PROJECT', '')
+GOOGLE_CLOUD_LOCATION = os.getenv('GOOGLE_CLOUD_LOCATION', 'global')
+USE_VERTEX_AI = os.getenv('GOOGLE_GENAI_USE_VERTEXAI', 'False').lower() == 'true'
 
-if GEMINI_API_KEY:
+# Initialize client based on configuration
+if USE_VERTEX_AI and GOOGLE_CLOUD_API_KEY:
+    # Use Vertex AI client
+    client = genai.Client(
+        vertexai=True,
+        api_key=GOOGLE_CLOUD_API_KEY,
+    )
+    print(f"Using Vertex AI client with project: {GOOGLE_CLOUD_PROJECT}")
+elif GEMINI_API_KEY:
+    # Use standard Gemini API client
     client = genai.Client(api_key=GEMINI_API_KEY)
+    print("Using standard Gemini API client")
 else:
     client = None
+    print("No API key configured, using mock generation")
 
 def generate_mock_image(prompt: str, aspect_ratio: str = '1:1', resolution: str = '1K') -> tuple:
     """Generate a mock image when Gemini API is not available."""
@@ -74,15 +96,88 @@ async def generate_image(
 ) -> dict:
     """Generate an image using Gemini API or mock if not available."""
 
-    image_data, text_response = generate_mock_image(prompt, aspect_ratio, resolution)
-    return {
-        'image_data': image_data,
-        'text_response': text_response,
-        'token_count': len(prompt.split()) * 2,
-        'thought_signature': None,
-        'grounding_metadata': None,
-        'is_mock': True
-    }
+    if not client:
+        image_data, text_response = generate_mock_image(prompt, aspect_ratio, resolution)
+        return {
+            'image_data': image_data,
+            'text_response': text_response,
+            'token_count': len(prompt.split()) * 2,
+            'thought_signature': None,
+            'grounding_metadata': None,
+            'is_mock': True
+        }
+
+    try:
+        # Use Nano Banana Pro (gemini-3-pro-image-preview) for Vertex AI
+        if USE_VERTEX_AI:
+            model = 'gemini-3-pro-image-preview'
+
+        # Prepare the prompt as a Part
+        text_part = types.Part.from_text(text=prompt)
+        contents = [types.Content(role="user", parts=[text_part])]
+
+        # Configure image generation
+        generate_content_config = types.GenerateContentConfig(
+            temperature=1,
+            top_p=0.95,
+            max_output_tokens=32768,
+            response_modalities=["TEXT", "IMAGE"],
+            safety_settings=[
+                types.SafetySetting(category="HARM_CATEGORY_HATE_SPEECH", threshold="OFF"),
+                types.SafetySetting(category="HARM_CATEGORY_DANGEROUS_CONTENT", threshold="OFF"),
+                types.SafetySetting(category="HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold="OFF"),
+                types.SafetySetting(category="HARM_CATEGORY_HARASSMENT", threshold="OFF")
+            ],
+            image_config=types.ImageConfig(
+                aspect_ratio=aspect_ratio,
+                image_size=resolution,
+                output_mime_type="image/png",
+            ),
+        )
+
+        # Generate image
+        response = client.models.generate_content(
+            model=model,
+            contents=contents,
+            config=generate_content_config,
+        )
+
+        # Extract image from response
+        if response.candidates and len(response.candidates) > 0:
+            candidate = response.candidates[0]
+            if candidate.content and candidate.content.parts:
+                for part in candidate.content.parts:
+                    if hasattr(part, 'inline_data') and part.inline_data:
+                        image_data = part.inline_data.data
+                        text_response = response.text if hasattr(response, 'text') else None
+                        return {
+                            'image_data': image_data,
+                            'text_response': text_response,
+                            'token_count': None,
+                            'thought_signature': None,
+                            'grounding_metadata': None,
+                            'is_mock': False
+                        }
+
+        # Fallback to mock if no image in response
+        image_data, text_response = generate_mock_image(prompt, aspect_ratio, resolution)
+        return {
+            'image_data': image_data,
+            'text_response': text_response,
+            'is_mock': True
+        }
+
+    except Exception as e:
+        print(f"Error generating image with Gemini API: {e}")
+        import traceback
+        traceback.print_exc()
+        image_data, text_response = generate_mock_image(prompt, aspect_ratio, resolution)
+        return {
+            'image_data': image_data,
+            'text_response': text_response,
+            'is_mock': True,
+            'error': str(e)
+        }
 
 async def edit_image(
     image_path: str,
@@ -157,7 +252,7 @@ async def generate_video(
     aspect_ratio: str = '16:9',
     duration: str = '5s'
 ) -> dict:
-    """Generate a video using Veo3 API or mock if not available."""
+    """Generate a video using Veo 3.1 API or mock if not available."""
 
     if not client:
         video_data, text_response = generate_mock_video(prompt, aspect_ratio, duration)
@@ -168,38 +263,117 @@ async def generate_video(
         }
 
     try:
-        # Use the real Gemini Veo3 API with the new google.genai package
-        config = {
-            'response_modalities': ['VIDEO'],
-        }
+        # Use Veo 3.1 for Vertex AI
+        if USE_VERTEX_AI:
+            model = 'veo-3.1-generate-001'
 
-        response = client.models.generate_content(
-            model=model,
-            contents=prompt,
-            config=config
-        )
+            # Configure video generation
+            from google.genai.types import GenerateVideosConfig
 
-        # Extract video data from the response
-        if response.candidates and len(response.candidates) > 0:
-            candidate = response.candidates[0]
-            if candidate.content and candidate.content.parts:
-                video_part = candidate.content.parts[0]
+            config = GenerateVideosConfig(
+                aspect_ratio=aspect_ratio,
+                # Note: output_gcs_uri is optional - without it, video returns inline
+            )
 
-                if hasattr(video_part, 'inline_data') and video_part.inline_data:
-                    video_data = video_part.inline_data.data
-                    return {
-                        'video_data': video_data,
-                        'text_response': response.text if hasattr(response, 'text') else None,
-                        'is_mock': False
-                    }
+            print(f"Generating video with Veo 3.1, prompt: {prompt[:100]}...")
 
-        # Fallback to mock if response format is unexpected
-        video_data, text_response = generate_mock_video(prompt, aspect_ratio, duration)
-        return {
-            'video_data': video_data,
-            'text_response': text_response,
-            'is_mock': True
-        }
+            # Trigger video generation (long-running operation)
+            operation = client.models.generate_videos(
+                model=model,
+                prompt=prompt,
+                config=config,
+            )
+
+            # Poll the operation until complete (with timeout)
+            max_wait_seconds = 120  # 2 minutes timeout
+            poll_interval = 5  # Check every 5 seconds
+            elapsed = 0
+
+            print("Waiting for video generation to complete...")
+            while not operation.done and elapsed < max_wait_seconds:
+                time.sleep(poll_interval)
+                elapsed += poll_interval
+                operation = client.operations.get(operation)
+                print(f"Still waiting... ({elapsed}s elapsed)")
+
+            if not operation.done:
+                print("Video generation timed out, falling back to mock")
+                video_data, text_response = generate_mock_video(prompt, aspect_ratio, duration)
+                return {
+                    'video_data': video_data,
+                    'text_response': 'Video generation timed out',
+                    'is_mock': True
+                }
+
+            # Extract the generated video
+            if operation.response and hasattr(operation.result, 'generated_videos'):
+                generated_videos = operation.result.generated_videos
+                if generated_videos and len(generated_videos) > 0:
+                    video_obj = generated_videos[0]
+
+                    # Check if video has inline data or URI
+                    if hasattr(video_obj, 'video') and video_obj.video:
+                        if hasattr(video_obj.video, 'inline_data') and video_obj.video.inline_data:
+                            video_data = video_obj.video.inline_data.data
+                            print(f"Video generated successfully, size: {len(video_data)} bytes")
+                            return {
+                                'video_data': video_data,
+                                'text_response': f'Video generated with Veo 3.1',
+                                'is_mock': False
+                            }
+                        elif hasattr(video_obj.video, 'uri'):
+                            # Video is stored in GCS, would need to download
+                            print(f"Video URI: {video_obj.video.uri}")
+                            video_data, text_response = generate_mock_video(prompt, aspect_ratio, duration)
+                            return {
+                                'video_data': video_data,
+                                'text_response': f'Video stored at: {video_obj.video.uri}',
+                                'is_mock': True,
+                                'video_uri': video_obj.video.uri
+                            }
+
+            # Fallback if unexpected response format
+            print("Unexpected response format from Veo 3.1")
+            video_data, text_response = generate_mock_video(prompt, aspect_ratio, duration)
+            return {
+                'video_data': video_data,
+                'text_response': text_response,
+                'is_mock': True
+            }
+        else:
+            # For non-Vertex AI, use the old method (will likely fail)
+            config = {
+                'response_modalities': ['VIDEO'],
+            }
+
+            response = client.models.generate_content(
+                model=model,
+                contents=prompt,
+                config=config
+            )
+
+            # Extract video data from the response
+            if response.candidates and len(response.candidates) > 0:
+                candidate = response.candidates[0]
+                if candidate.content and candidate.content.parts:
+                    video_part = candidate.content.parts[0]
+
+                    if hasattr(video_part, 'inline_data') and video_part.inline_data:
+                        video_data = video_part.inline_data.data
+                        return {
+                            'video_data': video_data,
+                            'text_response': response.text if hasattr(response, 'text') else None,
+                            'is_mock': False
+                        }
+
+            # Fallback to mock if response format is unexpected
+            video_data, text_response = generate_mock_video(prompt, aspect_ratio, duration)
+            return {
+                'video_data': video_data,
+                'text_response': text_response,
+                'is_mock': True
+            }
+
     except Exception as e:
         # Fallback to mock on error
         print(f"Error generating video with Gemini API: {e}")
