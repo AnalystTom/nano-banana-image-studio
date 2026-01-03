@@ -97,6 +97,118 @@ async def init_db():
                 FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
             );
 
+            -- VIDEO PRODUCTION CLI TABLES
+
+            CREATE TABLE IF NOT EXISTS projects (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                description TEXT,
+                status TEXT NOT NULL DEFAULT 'planning',
+                config TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS scripts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id TEXT NOT NULL,
+                version INTEGER NOT NULL,
+                content TEXT NOT NULL,
+                scene_count INTEGER,
+                approved BOOLEAN DEFAULT 0,
+                approved_at DATETIME,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+            );
+
+            CREATE TABLE IF NOT EXISTS scenes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id TEXT NOT NULL,
+                script_id INTEGER NOT NULL,
+                scene_number INTEGER NOT NULL,
+                description TEXT NOT NULL,
+                opening_frame_prompt TEXT NOT NULL,
+                closing_frame_prompt TEXT,
+                camera_direction TEXT,
+                duration REAL NOT NULL,
+                transition_type TEXT DEFAULT 'cut',
+                order_index INTEGER NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+                FOREIGN KEY (script_id) REFERENCES scripts(id) ON DELETE CASCADE
+            );
+
+            CREATE TABLE IF NOT EXISTS frames (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id TEXT NOT NULL,
+                scene_id INTEGER NOT NULL,
+                frame_type TEXT NOT NULL,
+                image_id INTEGER,
+                prompt TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'pending',
+                approval_feedback TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+                FOREIGN KEY (scene_id) REFERENCES scenes(id) ON DELETE CASCADE,
+                FOREIGN KEY (image_id) REFERENCES images(id) ON DELETE SET NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS scene_videos (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id TEXT NOT NULL,
+                scene_id INTEGER NOT NULL,
+                video_id INTEGER,
+                reference_frame_id INTEGER,
+                prompt TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'pending',
+                trim_start REAL DEFAULT 0,
+                trim_end REAL,
+                approval_feedback TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+                FOREIGN KEY (scene_id) REFERENCES scenes(id) ON DELETE CASCADE,
+                FOREIGN KEY (video_id) REFERENCES videos(id) ON DELETE SET NULL,
+                FOREIGN KEY (reference_frame_id) REFERENCES frames(id) ON DELETE SET NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS workflows (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id TEXT NOT NULL UNIQUE,
+                current_phase TEXT NOT NULL DEFAULT 'planning',
+                phase_data TEXT,
+                checkpoint TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+            );
+
+            CREATE TABLE IF NOT EXISTS claude_interactions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id TEXT NOT NULL,
+                phase TEXT NOT NULL,
+                user_message TEXT,
+                claude_response TEXT,
+                token_count INTEGER,
+                model TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+            );
+
+            CREATE TABLE IF NOT EXISTS batch_jobs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id TEXT NOT NULL,
+                job_type TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'queued',
+                total_items INTEGER NOT NULL,
+                completed_items INTEGER DEFAULT 0,
+                failed_items INTEGER DEFAULT 0,
+                error_log TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                started_at DATETIME,
+                completed_at DATETIME,
+                FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+            );
+
             INSERT OR IGNORE INTO settings (id) VALUES (1);
 
             INSERT OR IGNORE INTO prompt_templates (name, category, template, description) VALUES
