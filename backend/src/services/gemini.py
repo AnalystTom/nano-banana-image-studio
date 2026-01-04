@@ -2,8 +2,14 @@ import os
 from PIL import Image
 import io
 import random
+from google import genai
 
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+
+# Initialize Gemini client if key is available
+GEMINI_CLIENT = None
+if GEMINI_API_KEY:
+    GEMINI_CLIENT = genai.Client(api_key=GEMINI_API_KEY)
 
 def generate_mock_image(prompt: str, aspect_ratio: str = '1:1', resolution: str = '1K') -> tuple:
     """Generate a mock image when Gemini API is not available."""
@@ -67,6 +73,37 @@ async def generate_image(
 ) -> dict:
     """Generate an image using Gemini API or mock if not available."""
 
+    # Use real API if client is available
+    if GEMINI_CLIENT:
+        try:
+            # Generate image using Gemini API
+            response = GEMINI_CLIENT.models.generate_images(
+                model=model,
+                prompt=prompt,
+                config={
+                    'aspectRatio': aspect_ratio,
+                }
+            )
+
+            # Get the first image from response
+            if response.generated_images:
+                image = response.generated_images[0]
+
+                # Convert to bytes
+                image_bytes = image.image.data
+
+                return {
+                    'image_data': image_bytes,
+                    'text_response': 'Image generated successfully',
+                    'token_count': 0,
+                    'thought_signature': None,
+                    'grounding_metadata': None,
+                    'is_mock': False
+                }
+        except Exception as e:
+            print(f"Gemini API error: {e}. Falling back to mock mode.")
+
+    # Fallback to mock mode
     image_data, text_response = generate_mock_image(prompt, aspect_ratio, resolution)
     return {
         'image_data': image_data,
