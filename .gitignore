@@ -22,7 +22,13 @@ dist/
 .DS_Store
 Thumbs.db
 
-# Generated images
+# Generated images and videos
 backend/static/images/*.png
 backend/static/images/*.jpg
 backend/static/images/*.jpeg
+backend/static/videos/*.mp4
+backend/static/videos/*.gif
+
+# Project workspaces (generated at runtime)
+projects/*/
+backend/database.db
