@@ -15,7 +15,7 @@ app = typer.Typer(
 console = Console()
 
 # Import command modules
-from .commands import project, script, scenes
+from .commands import project, script, scenes, frames
 
 # Main commands at root level
 @app.command("create-video")
@@ -116,6 +116,54 @@ def edit_scene_command(
 ):
     """Edit a scene's properties."""
     asyncio.run(scenes.edit_scene(project_id=project_id, scene_number=scene_number))
+
+# Frame commands
+@app.command("generate-frames")
+def generate_frames_command(
+    project_id: str = typer.Argument(..., help="Project ID")
+):
+    """Generate all pending frames for a project."""
+    asyncio.run(frames.generate_frames(project_id=project_id))
+
+@app.command("show-frames")
+def show_frames_command(
+    project_id: str = typer.Argument(..., help="Project ID"),
+    scene: Optional[int] = typer.Option(None, "--scene", "-s", help="Filter by scene number")
+):
+    """Show all frames for a project."""
+    asyncio.run(frames.show_frames(project_id=project_id, scene=scene))
+
+@app.command("show-frame")
+def show_frame_command(
+    project_id: str = typer.Argument(..., help="Project ID"),
+    frame_id: int = typer.Argument(..., help="Frame ID")
+):
+    """Show detailed information about a specific frame."""
+    asyncio.run(frames.show_frame(project_id=project_id, frame_id=frame_id))
+
+@app.command("approve-frame")
+def approve_frame_command(
+    project_id: str = typer.Argument(..., help="Project ID"),
+    frame_id: int = typer.Argument(..., help="Frame ID")
+):
+    """Approve a single frame."""
+    asyncio.run(frames.approve_frame(project_id=project_id, frame_id=frame_id))
+
+@app.command("approve-all-frames")
+def approve_all_frames_command(
+    project_id: str = typer.Argument(..., help="Project ID")
+):
+    """Approve all completed frames in a project."""
+    asyncio.run(frames.approve_all_frames(project_id=project_id))
+
+@app.command("regenerate-frame")
+def regenerate_frame_command(
+    project_id: str = typer.Argument(..., help="Project ID"),
+    frame_id: int = typer.Argument(..., help="Frame ID"),
+    feedback: Optional[str] = typer.Option(None, "--feedback", "-f", help="Feedback for prompt refinement")
+):
+    """Regenerate a frame with optional feedback."""
+    asyncio.run(frames.regenerate_frame(project_id=project_id, frame_id=frame_id, feedback=feedback))
 
 @app.callback()
 def callback():

@@ -113,3 +113,105 @@ def display_script(script_content: str, scene_count: int):
         border_style=COLOR_CLAUDE,
         padding=(1, 2)
     ))
+
+def display_frames_grid(frames: List[Dict[str, Any]], stats: Optional[Dict[str, int]] = None):
+    """Display frames in a table format with status indicators."""
+    table = Table(title="Frame Generation Status", show_header=True, header_style="bold cyan")
+
+    table.add_column("ID", style="dim", width=8)
+    table.add_column("Scene", justify="center", width=8)
+    table.add_column("Type", justify="center", width=10)
+    table.add_column("Status", justify="center", width=12)
+    table.add_column("Image", style="dim", width=30)
+    table.add_column("Created", justify="right", width=12)
+
+    # Status colors mapping
+    status_colors = {
+        'pending': COLOR_WARNING,
+        'generating': COLOR_INFO,
+        'completed': COLOR_SUCCESS,
+        'approved': "bright_green",
+        'failed': COLOR_ERROR,
+        'rejected': "orange"
+    }
+
+    for frame in frames:
+        status = frame.get('status', 'unknown')
+        status_color = status_colors.get(status, "white")
+
+        table.add_row(
+            str(frame['id']),
+            f"Scene {frame.get('scene_number', '?')}",
+            frame.get('frame_type', 'unknown').title(),
+            f"[{status_color}]{status}[/{status_color}]",
+            frame.get('image_filename', 'None')[:30] if frame.get('image_filename') else '-',
+            frame.get('created_at', 'N/A')[:10] if frame.get('created_at') else 'N/A'
+        )
+
+    console.print(table)
+
+    # Display statistics if provided
+    if stats:
+        stats_content = f"""[bold]Total:[/bold] {stats['total']} frames
+[bold]Approved:[/bold] [{status_colors['approved']}]{stats['approved']}[/{status_colors['approved']}] | [bold]Completed:[/bold] [{status_colors['completed']}]{stats['completed']}[/{status_colors['completed']}] | [bold]Pending:[/bold] [{status_colors['pending']}]{stats['pending']}[/{status_colors['pending']}]
+[bold]Failed:[/bold] [{status_colors['failed']}]{stats['failed']}[/{status_colors['failed']}] | [bold]Rejected:[/bold] [{status_colors['rejected']}]{stats['rejected']}[/{status_colors['rejected']}] | [bold]Generating:[/bold] [{status_colors['generating']}]{stats['generating']}[/{status_colors['generating']}]"""
+
+        console.print(Panel(stats_content, title="Statistics", border_style=COLOR_INFO))
+
+def display_frame_detail(frame: Dict[str, Any], scene: Optional[Dict[str, Any]] = None):
+    """Display detailed information about a single frame."""
+    status_colors = {
+        'pending': COLOR_WARNING,
+        'generating': COLOR_INFO,
+        'completed': COLOR_SUCCESS,
+        'approved': "bright_green",
+        'failed': COLOR_ERROR,
+        'rejected': "orange"
+    }
+
+    status = frame.get('status', 'unknown')
+    status_color = status_colors.get(status, "white")
+
+    # Frame information
+    info_content = f"""[bold]Frame ID:[/bold] {frame['id']}
+[bold]Scene:[/bold] Scene {frame.get('scene_number', '?')}
+[bold]Type:[/bold] {frame.get('frame_type', 'unknown').title()}
+[bold]Status:[/bold] [{status_color}]{status}[/{status_color}]
+[bold]Created:[/bold] {frame.get('created_at', 'N/A')}"""
+
+    if frame.get('image_filename'):
+        info_content += f"\n[bold]Image:[/bold] {frame['image_filename']}"
+
+    if frame.get('image_path'):
+        info_content += f"\n[bold]Path:[/bold] {frame['image_path']}"
+
+    if frame.get('approval_feedback'):
+        info_content += f"\n[bold]Feedback:[/bold] {frame['approval_feedback']}"
+
+    console.print(Panel(info_content, title="Frame Information", border_style=COLOR_INFO))
+
+    # Prompt panel
+    prompt_text = frame.get('prompt', 'No prompt available')
+    console.print(Panel(
+        prompt_text,
+        title="Image Generation Prompt",
+        border_style=COLOR_PROMPT,
+        padding=(1, 2)
+    ))
+
+    # Scene context if provided
+    if scene:
+        scene_content = f"""[bold]Scene {scene.get('scene_number', '?')}:[/bold] {scene.get('title', 'Untitled')}
+[bold]Duration:[/bold] {scene.get('duration', 0)}s
+[bold]Description:[/bold] {scene.get('description', 'No description')[:200]}..."""
+
+        console.print(Panel(scene_content, title="Scene Context", border_style="dim"))
+
+def display_generation_progress(current: int, total: int, status_message: str):
+    """Display generation progress information."""
+    percentage = (current / total * 100) if total > 0 else 0
+
+    progress_content = f"""[bold]Progress:[/bold] {current}/{total} frames ({percentage:.1f}%)
+[bold]Status:[/bold] {status_message}"""
+
+    console.print(Panel(progress_content, border_style=COLOR_INFO))
