@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discord Scout - Frame Generation Showcase</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 60px;
+            color: white;
+        }
+
+        h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            font-size: 1.2em;
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .stat-card {
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px);
+            padding: 20px 30px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .stat-number {
+            font-size: 2.5em;
+            font-weight: bold;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .scene-section {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+
+        .scene-header {
+            margin-bottom: 30px;
+        }
+
+        .scene-number {
+            color: #667eea;
+            font-size: 2em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .scene-description {
+            color: #666;
+            font-size: 1.1em;
+            line-height: 1.6;
+        }
+
+        .frames-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 30px;
+        }
+
+        .frame-card {
+            border: 2px solid #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .frame-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        }
+
+        .frame-image {
+            width: 100%;
+            height: 300px;
+            object-fit: cover;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .frame-info {
+            padding: 20px;
+        }
+
+        .frame-type {
+            display: inline-block;
+            padding: 6px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .frame-type.opening {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .frame-type.closing {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+
+        .frame-prompt {
+            color: #555;
+            font-size: 0.95em;
+            line-height: 1.6;
+            margin-top: 10px;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 60px;
+            color: white;
+            opacity: 0.8;
+        }
+
+        .tech-stack {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            margin-top: 40px;
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .tech-stack h3 {
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .tech-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .tech-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎬 Discord Scout Demo Video</h1>
+            <p class="subtitle">AI-Powered Frame Generation Showcase</p>
+            <p>Phase 4: Frame Generation Workflow - Complete End-to-End Demo</p>
+
+            <div class="stats">
+                <div class="stat-card">
+                    <span class="stat-number">5</span>
+                    <span class="stat-label">Scenes</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number">10</span>
+                    <span class="stat-label">Frames Generated</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number">30s</span>
+                    <span class="stat-label">Total Duration</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number">100%</span>
+                    <span class="stat-label">Success Rate</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Scene 1 -->
+        <div class="scene-section">
+            <div class="scene-header">
+                <div class="scene-number">Scene 1: Graduation Day</div>
+                <p class="scene-description">Graduate celebrating with diploma - cap and gown, confetti, proud parents</p>
+            </div>
+            <div class="frames-grid">
+                <div class="frame-card">
+                    <img src="./images/scene_1_opening_20260104_132208_bc66f646.png" alt="Scene 1 Opening" class="frame-image">
+                    <div class="frame-info">
+                        <span class="frame-type opening">OPENING FRAME</span>
+                        <p class="frame-prompt">
+                            <strong>Prompt:</strong> Cinematic shot of young computer science graduate in cap and gown, holding diploma triumphantly with huge smile, confetti falling, proud parents blurred in background, warm hopeful lighting, shallow depth of field, professional photography style
+                        </p>
+                    </div>
+                </div>
+                <div class="frame-card">
+                    <img src="./images/scene_1_closing_20260104_132202_a9e4db82.png" alt="Scene 1 Closing" class="frame-image">
+                    <div class="frame-info">
+                        <span class="frame-type closing">CLOSING FRAME</span>
+                        <p class="frame-prompt">
+                            <strong>Prompt:</strong> Close-up of graduate's excited face as camera pushes in, diploma still visible, warm golden hour lighting, optimistic mood
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scene 2 -->
+        <div class="scene-section">
+            <div class="scene-header">
+                <div class="scene-number">Scene 2: The Struggle</div>
+                <p class="scene-description">Job search struggle and SaaS idea overload - frustrated at laptop with rejected applications and scattered signals</p>
+            </div>
+            <div class="frames-grid">
+                <div class="frame-card">
+                    <img src="./images/scene_2_opening_20260104_132209_f3972ea1.png" alt="Scene 2 Opening" class="frame-image">
+                    <div class="frame-info">
+                        <span class="frame-type opening">OPENING FRAME</span>
+                        <p class="frame-prompt">
+                            <strong>Prompt:</strong> Over-shoulder shot of graduate at laptop showing Indeed and LinkedIn job sites on screen, multiple browser tabs open with "Application Rejected" emails visible, frustrated body language, harsh blue monitor glow, messy desk with coffee cups
+                        </p>
+                    </div>
+                </div>
+                <div class="frame-card">
+                    <img src="./images/scene_2_closing_20260104_132207_23fae7c6.png" alt="Scene 2 Closing" class="frame-image">
+                    <div class="frame-info">
+                        <span class="frame-type closing">CLOSING FRAME</span>
+                        <p class="frame-prompt">
+                            <strong>Prompt:</strong> Split screen showing messy digital chaos: Reddit r/SaaS threads, Twitter feeds, Notion docs with scattered ideas, LinkedIn posts, Discord servers - information overload visualization
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scene 3 -->
+        <div class="scene-section">
+            <div class="scene-header">
+                <div class="scene-number">Scene 3: The Discovery</div>
+                <p class="scene-description">Discovery of Discord Scout platform - aha moment</p>
+            </div>
+            <div class="frames-grid">
+                <div class="frame-card">
+                    <img src="./images/scene_3_opening_20260104_132203_2e47bee1.png" alt="Scene 3 Opening" class="frame-image">
+                    <div class="frame-info">
+                        <span class="frame-type opening">OPENING FRAME</span>
+                        <p class="frame-prompt">
+                            <strong>Prompt:</strong> Screen showing Discord Scout clean modern interface with aggregated demand data, feature requests organized, clear signal-to-noise improvement, lightbulb moment, bright clean UI design
+                        </p>
+                    </div>
+                </div>
+                <div class="frame-card">
+                    <img src="./images/scene_3_closing_20260104_132210_17a0b1c1.png" alt="Scene 3 Closing" class="frame-image">
+                    <div class="frame-info">
+                        <span class="frame-type closing">CLOSING FRAME</span>
+                        <p class="frame-prompt">
+                            <strong>Prompt:</strong> Camera pulls back showing graduate leaning forward interested, Discord Scout interface showing clear feature demand pattern for "sales acquisition tool", hopeful lighting returns
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scene 4 -->
+        <div class="scene-section">
+            <div class="scene-header">
+                <div class="scene-number">Scene 4: Building the Solution</div>
+                <p class="scene-description">Using platform and building solution - montage of development</p>
+            </div>
+            <div class="frames-grid">
+                <div class="frame-card">
+                    <img src="./images/scene_4_opening_20260104_132204_07b8505b.png" alt="Scene 4 Opening" class="frame-image">
+                    <div class="frame-info">
+                        <span class="frame-type opening">OPENING FRAME</span>
+                        <p class="frame-prompt">
+                            <strong>Prompt:</strong> Split screen: Discord Scout showing real user quotes "I wish it could..." on left, VS Code editor on right actively being typed into, determined focus, progress happening
+                        </p>
+                    </div>
+                </div>
+                <div class="frame-card">
+                    <img src="./images/scene_4_closing_20260104_132211_33513c32.png" alt="Scene 4 Closing" class="frame-image">
+                    <div class="frame-info">
+                        <span class="frame-type closing">CLOSING FRAME</span>
+                        <p class="frame-prompt">
+                            <strong>Prompt:</strong> Fast-paced development montage: code being written, UI being designed, app taking shape, progress bar filling, energetic productive atmosphere
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scene 5 -->
+        <div class="scene-section">
+            <div class="scene-header">
+                <div class="scene-number">Scene 5: Success!</div>
+                <p class="scene-description">Success - reaching out to users and growing business</p>
+            </div>
+            <div class="frames-grid">
+                <div class="frame-card">
+                    <img src="./images/scene_5_opening_20260104_132205_604862b7.png" alt="Scene 5 Opening" class="frame-image">
+                    <div class="frame-info">
+                        <span class="frame-type opening">OPENING FRAME</span>
+                        <p class="frame-prompt">
+                            <strong>Prompt:</strong> Discord Scout interface showing "Send to 47 interested users" button being clicked, email composer opening with personalized outreach, CRM integration visible
+                        </p>
+                    </div>
+                </div>
+                <div class="frame-card">
+                    <img src="./images/scene_5_closing_20260104_132213_6509ebfe.png" alt="Scene 5 Closing" class="frame-image">
+                    <div class="frame-info">
+                        <span class="frame-type closing">CLOSING FRAME</span>
+                        <p class="frame-prompt">
+                            <strong>Prompt:</strong> Dashboard showing metrics rising: inbox filling with positive responses, payment notifications popping up, MRR counter ticking up, triumphant celebration moment, success achieved
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tech-stack">
+            <h3>🛠️ Technology Stack</h3>
+            <div class="tech-list">
+                <span class="tech-badge">Python + AsyncIO</span>
+                <span class="tech-badge">Typer CLI Framework</span>
+                <span class="tech-badge">Rich Terminal UI</span>
+                <span class="tech-badge">SQLite + aiosqlite</span>
+                <span class="tech-badge">Gemini 2.5 Flash Image</span>
+                <span class="tech-badge">Claude 3.5 Sonnet</span>
+                <span class="tech-badge">Batch Processing</span>
+                <span class="tech-badge">Workflow State Machine</span>
+            </div>
+        </div>
+
+        <footer>
+            <p>Generated with Nano Banana Image Studio - Video Production CLI</p>
+            <p style="margin-top: 10px; font-size: 0.9em;">Phase 4: Frame Generation Workflow | All frames approved ✓</p>
+        </footer>
+    </div>
+</body>
+</html>
