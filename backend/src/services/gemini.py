@@ -5,11 +5,15 @@ import random
 from google import genai
 
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+GOOGLE_CLOUD_PROJECT = os.getenv('GOOGLE_CLOUD_PROJECT', 'august-sandbox-483210-c7')
 
-# Initialize Gemini client if key is available
+# Initialize Gemini client with Nano Banana project configuration
 GEMINI_CLIENT = None
 if GEMINI_API_KEY:
-    GEMINI_CLIENT = genai.Client(api_key=GEMINI_API_KEY)
+    GEMINI_CLIENT = genai.Client(
+        api_key=GEMINI_API_KEY,
+        http_options={'api_version': 'v1alpha'}
+    )
 
 def generate_mock_image(prompt: str, aspect_ratio: str = '1:1', resolution: str = '1K') -> tuple:
     """Generate a mock image when Gemini API is not available."""
@@ -65,43 +69,65 @@ def generate_mock_image(prompt: str, aspect_ratio: str = '1:1', resolution: str 
 
 async def generate_image(
     prompt: str,
-    model: str = 'gemini-2.5-flash-image',
+    model: str = 'imagen-3.0-generate-001',
     aspect_ratio: str = '1:1',
     resolution: str = '1K',
     response_modality: str = 'TEXT_IMAGE',
     google_search_enabled: bool = False
 ) -> dict:
-    """Generate an image using Gemini API or mock if not available."""
+    """
+    Generate an image using Nano Banana (Google Gemini/Imagen API).
 
-    # Use real API if client is available
+    Uses the august-sandbox-483210-c7 Google Cloud project with Imagen 3.0.
+    Falls back to mock mode if API is unavailable or encounters errors.
+    """
+
+    # Use Nano Banana API (Google Imagen) if client is available
     if GEMINI_CLIENT:
         try:
-            # Generate image using Gemini API
+            # Map aspect ratios to Imagen format
+            aspect_ratio_map = {
+                '1:1': '1:1',
+                '16:9': '16:9',
+                '9:16': '9:16',
+                '4:3': '4:3',
+                '3:4': '3:4',
+            }
+
+            imagen_aspect_ratio = aspect_ratio_map.get(aspect_ratio, '1:1')
+
+            # Generate image using Nano Banana (Imagen API)
             response = GEMINI_CLIENT.models.generate_images(
                 model=model,
                 prompt=prompt,
                 config={
-                    'aspectRatio': aspect_ratio,
+                    'number_of_images': 1,
+                    'aspect_ratio': imagen_aspect_ratio,
+                    'safety_filter_level': 'block_some',
+                    'person_generation': 'allow_adult',
                 }
             )
 
-            # Get the first image from response
-            if response.generated_images:
+            # Get the first generated image
+            if response.generated_images and len(response.generated_images) > 0:
                 image = response.generated_images[0]
 
-                # Convert to bytes
+                # Extract image bytes
                 image_bytes = image.image.data
 
                 return {
                     'image_data': image_bytes,
-                    'text_response': 'Image generated successfully',
+                    'text_response': 'Image generated successfully via Nano Banana API',
                     'token_count': 0,
                     'thought_signature': None,
                     'grounding_metadata': None,
                     'is_mock': False
                 }
         except Exception as e:
-            print(f"Gemini API error: {e}. Falling back to mock mode.")
+            print(f"Nano Banana API error: {e}. Falling back to mock mode.")
+            # Log full error for debugging
+            import traceback
+            traceback.print_exc()
 
     # Fallback to mock mode
     image_data, text_response = generate_mock_image(prompt, aspect_ratio, resolution)

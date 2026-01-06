@@ -240,7 +240,7 @@ class BatchService:
                         INSERT INTO images (filename, file_path, prompt, model, aspect_ratio, resolution, is_mock)
                         VALUES (?, ?, ?, ?, ?, '2K', ?)
                         """,
-                        (custom_filename, file_path, prompt, 'gemini-2.5-flash-image', aspect_ratio, result.get('is_mock', True))
+                        (custom_filename, file_path, prompt, 'imagen-3.0-generate-001', aspect_ratio, result.get('is_mock', True))
                     )
                     await db.commit()
                     image_id = cursor.lastrowid
