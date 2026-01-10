@@ -215,3 +215,100 @@ def display_generation_progress(current: int, total: int, status_message: str):
 [bold]Status:[/bold] {status_message}"""
 
     console.print(Panel(progress_content, border_style=COLOR_INFO))
+
+def display_videos_grid(videos: List[Dict[str, Any]], stats: Optional[Dict[str, int]] = None):
+    """Display scene videos in a table format with status indicators."""
+    table = Table(title="Scene Video Status", show_header=True, header_style="bold cyan")
+
+    table.add_column("ID", style="dim", width=8)
+    table.add_column("Scene", justify="center", width=8)
+    table.add_column("Duration", justify="center", width=10)
+    table.add_column("Status", justify="center", width=12)
+    table.add_column("Video File", style="dim", width=30)
+    table.add_column("Created", justify="right", width=12)
+
+    # Status colors mapping
+    status_colors = {
+        'pending': COLOR_WARNING,
+        'generating': COLOR_INFO,
+        'completed': COLOR_SUCCESS,
+        'approved': "bright_green",
+        'failed': COLOR_ERROR,
+        'rejected': "orange"
+    }
+
+    for video in videos:
+        status = video.get('status', 'unknown')
+        status_color = status_colors.get(status, "white")
+
+        table.add_row(
+            str(video['id']),
+            f"Scene {video.get('scene_number', '?')}",
+            video.get('duration', '?'),
+            f"[{status_color}]{status}[/{status_color}]",
+            video.get('video_filename', 'None')[:30] if video.get('video_filename') else '-',
+            video.get('created_at', 'N/A')[:10] if video.get('created_at') else 'N/A'
+        )
+
+    console.print(table)
+
+    # Display statistics if provided
+    if stats:
+        stats_content = f"""[bold]Total:[/bold] {stats['total']} videos
+[bold]Approved:[/bold] [{status_colors['approved']}]{stats['approved']}[/{status_colors['approved']}] | [bold]Completed:[/bold] [{status_colors['completed']}]{stats['completed']}[/{status_colors['completed']}] | [bold]Pending:[/bold] [{status_colors['pending']}]{stats['pending']}[/{status_colors['pending']}]
+[bold]Failed:[/bold] [{status_colors['failed']}]{stats['failed']}[/{status_colors['failed']}] | [bold]Rejected:[/bold] [{status_colors['rejected']}]{stats['rejected']}[/{status_colors['rejected']}] | [bold]Generating:[/bold] [{status_colors['generating']}]{stats['generating']}[/{status_colors['generating']}]"""
+
+        console.print(Panel(stats_content, title="Statistics", border_style=COLOR_INFO))
+
+def display_video_detail(video: Dict[str, Any], scene: Optional[Dict[str, Any]] = None):
+    """Display detailed information about a single scene video."""
+    status_colors = {
+        'pending': COLOR_WARNING,
+        'generating': COLOR_INFO,
+        'completed': COLOR_SUCCESS,
+        'approved': "bright_green",
+        'failed': COLOR_ERROR,
+        'rejected': "orange"
+    }
+
+    status = video.get('status', 'unknown')
+    status_color = status_colors.get(status, "white")
+
+    # Video information
+    info_content = f"""[bold]Video ID:[/bold] {video['id']}
+[bold]Scene:[/bold] Scene {video.get('scene_number', '?')}
+[bold]Status:[/bold] [{status_color}]{status}[/{status_color}]
+[bold]Duration:[/bold] {video.get('duration', 'N/A')}
+[bold]Aspect Ratio:[/bold] {video.get('aspect_ratio', 'N/A')}
+[bold]Created:[/bold] {video.get('created_at', 'N/A')}"""
+
+    if video.get('video_filename'):
+        info_content += f"\n[bold]Video File:[/bold] {video['video_filename']}"
+
+    if video.get('video_path'):
+        info_content += f"\n[bold]Path:[/bold] {video['video_path']}"
+
+    if video.get('trim_start') or video.get('trim_end'):
+        info_content += f"\n[bold]Trim:[/bold] {video.get('trim_start', 0)}s - {video.get('trim_end', 'end')}s"
+
+    if video.get('approval_feedback'):
+        info_content += f"\n[bold]Feedback:[/bold] {video['approval_feedback']}"
+
+    console.print(Panel(info_content, title="Video Information", border_style=COLOR_INFO))
+
+    # Motion prompt panel
+    prompt_text = video.get('prompt', 'No motion prompt available')
+    console.print(Panel(
+        prompt_text,
+        title="Motion Prompt (Veo API)",
+        border_style=COLOR_PROMPT,
+        padding=(1, 2)
+    ))
+
+    # Scene context if provided
+    if scene:
+        scene_content = f"""[bold]Scene {scene.get('scene_number', '?')}:[/bold] {scene.get('title', 'Untitled') if scene.get('title') else 'Scene'}
+[bold]Duration:[/bold] {scene.get('duration', 0)}s
+[bold]Description:[/bold] {scene.get('description', 'No description')[:200]}..."""
+
+        console.print(Panel(scene_content, title="Scene Context", border_style="dim"))

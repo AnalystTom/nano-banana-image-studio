@@ -209,12 +209,59 @@ def generate_mock_video(prompt: str, aspect_ratio: str = '16:9', duration: str =
 
 async def generate_video(
     prompt: str,
-    model: str = 'veo-3.0-generate-preview',
+    model: str = 'veo-3.0-generate',
     aspect_ratio: str = '16:9',
-    duration: str = '5s'
+    duration: str = '5s',
+    image_path: str = None
 ) -> dict:
-    """Generate a video using Veo3 API or mock if not available."""
+    """
+    Generate a video using Veo API via Nano Banana.
 
+    Supports both text-to-video and image-to-video generation.
+    Falls back to mock mode if API is unavailable or encounters errors.
+
+    Args:
+        prompt: Motion prompt describing the video content
+        model: Veo model to use (veo-3.0-generate or veo-2.0-generate)
+        aspect_ratio: Video aspect ratio (16:9 or 9:16)
+        duration: Video duration ('5s' or '8s')
+        image_path: Optional path to starting image for image-to-video
+    """
+
+    if GEMINI_CLIENT:
+        try:
+            config = {
+                'duration': duration,
+                'aspect_ratio': aspect_ratio,
+            }
+
+            # If image path provided, load and include in config
+            if image_path:
+                with open(image_path, 'rb') as f:
+                    image_data = f.read()
+                config['starting_image'] = image_data
+
+            # Generate video using Veo API
+            response = GEMINI_CLIENT.models.generate_video(
+                model=model,
+                prompt=prompt,
+                config=config
+            )
+
+            if response.generated_videos and len(response.generated_videos) > 0:
+                video = response.generated_videos[0]
+                return {
+                    'video_data': video.video.data,
+                    'duration': duration,
+                    'text_response': f'Video generated successfully via Nano Banana API ({model})',
+                    'is_mock': False
+                }
+        except Exception as e:
+            print(f"Veo API error: {e}. Falling back to mock mode.")
+            import traceback
+            traceback.print_exc()
+
+    # Fallback to mock mode
     video_data, text_response = generate_mock_video(prompt, aspect_ratio, duration)
     return {
         'video_data': video_data,

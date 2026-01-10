@@ -101,7 +101,7 @@ class FrameService:
             db.row_factory = aiosqlite.Row
             cursor = await db.execute(
                 """
-                SELECT f.*, i.filename as image_filename
+                SELECT f.*, i.filename as image_filename, i.file_path as image_path
                 FROM frames f
                 LEFT JOIN images i ON f.image_id = i.id
                 WHERE f.scene_id = ?

@@ -15,7 +15,7 @@ app = typer.Typer(
 console = Console()
 
 # Import command modules
-from .commands import project, script, scenes, frames
+from .commands import project, script, scenes, frames, videos
 
 # Main commands at root level
 @app.command("create-video")
@@ -164,6 +164,54 @@ def regenerate_frame_command(
 ):
     """Regenerate a frame with optional feedback."""
     asyncio.run(frames.regenerate_frame(project_id=project_id, frame_id=frame_id, feedback=feedback))
+
+# Video commands
+@app.command("generate-videos")
+def generate_videos_command(
+    project_id: str = typer.Argument(..., help="Project ID")
+):
+    """Generate videos for all scenes in a project."""
+    asyncio.run(videos.generate_videos(project_id=project_id))
+
+@app.command("show-videos")
+def show_videos_command(
+    project_id: str = typer.Argument(..., help="Project ID"),
+    scene: Optional[int] = typer.Option(None, "--scene", "-s", help="Filter by scene number")
+):
+    """Show all videos for a project."""
+    asyncio.run(videos.show_videos(project_id=project_id, scene=scene))
+
+@app.command("show-video")
+def show_video_command(
+    project_id: str = typer.Argument(..., help="Project ID"),
+    video_id: int = typer.Argument(..., help="Video ID")
+):
+    """Show detailed information about a specific video."""
+    asyncio.run(videos.show_video(project_id=project_id, video_id=video_id))
+
+@app.command("approve-video")
+def approve_video_command(
+    project_id: str = typer.Argument(..., help="Project ID"),
+    video_id: int = typer.Argument(..., help="Video ID")
+):
+    """Approve a single video."""
+    asyncio.run(videos.approve_video(project_id=project_id, video_id=video_id))
+
+@app.command("approve-all-videos")
+def approve_all_videos_command(
+    project_id: str = typer.Argument(..., help="Project ID")
+):
+    """Approve all completed videos in a project."""
+    asyncio.run(videos.approve_all_videos(project_id=project_id))
+
+@app.command("regenerate-video")
+def regenerate_video_command(
+    project_id: str = typer.Argument(..., help="Project ID"),
+    video_id: int = typer.Argument(..., help="Video ID"),
+    motion_prompt: Optional[str] = typer.Option(None, "--motion-prompt", "-m", help="Custom motion prompt")
+):
+    """Regenerate a video with optional custom motion prompt."""
+    asyncio.run(videos.regenerate_video(project_id=project_id, video_id=video_id, motion_prompt=motion_prompt))
 
 @app.callback()
 def callback():
