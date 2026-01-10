@@ -312,6 +312,7 @@ async def generate_video(
     video_data, text_response = generate_mock_video(prompt, aspect_ratio, duration)
     return {
         'video_data': video_data,
+        'duration': duration,
         'text_response': text_response,
         'is_mock': True
     }
