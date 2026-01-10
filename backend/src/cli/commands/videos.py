@@ -121,7 +121,7 @@ async def generate_videos(project_id: str):
             project_id=project_id,
             scenes=scenes,
             aspect_ratio='16:9',
-            model='veo-3.0-generate',
+            model='veo-3.0-generate-001',
             progress_callback=lambda c, t, r: progress.update(task_id, advance=1) or progress_callback(c, t, r)
         )
 

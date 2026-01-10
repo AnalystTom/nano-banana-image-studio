@@ -70,7 +70,7 @@ class VideoGenerationService:
         opening_frame_id: int,
         aspect_ratio: str = '16:9',
         duration: str = '5s',
-        model: str = 'veo-3.0-generate',
+        model: str = 'veo-3.0-generate-001',
         max_retries: int = 3
     ) -> Dict[str, Any]:
         """
@@ -184,7 +184,7 @@ class VideoGenerationService:
         project_id: str,
         scene: Dict[str, Any],
         aspect_ratio: str = '16:9',
-        model: str = 'veo-3.0-generate'
+        model: str = 'veo-3.0-generate-001'
     ) -> Dict[str, Any]:
         """
         Generate a video for a single scene.
@@ -248,7 +248,7 @@ class VideoGenerationService:
         project_id: str,
         scenes: Optional[List[Dict[str, Any]]] = None,
         aspect_ratio: str = '16:9',
-        model: str = 'veo-3.0-generate',
+        model: str = 'veo-3.0-generate-001',
         progress_callback: Optional[callable] = None
     ) -> Dict[str, Any]:
         """
@@ -319,7 +319,7 @@ class VideoGenerationService:
         scene_video_id: int,
         custom_prompt: Optional[str] = None,
         aspect_ratio: str = '16:9',
-        model: str = 'veo-3.0-generate'
+        model: str = 'veo-3.0-generate-001'
     ) -> Dict[str, Any]:
         """
         Regenerate a video for a scene with optional custom prompt.

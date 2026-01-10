@@ -74,6 +74,111 @@ When the API is unavailable or encounters errors, the system automatically falls
 - Marks images with `is_mock: true` flag
 - Perfect for development and testing
 
+### Video Generation Service
+
+Located at: `backend/src/services/gemini.py`
+
+#### Veo 3 API Integration
+
+**Model:** `veo-3.0-generate-001` (stable)
+
+```python
+await generate_video(
+    prompt="Motion description here",
+    model="veo-3.0-generate-001",
+    aspect_ratio="16:9",           # 16:9 or 9:16
+    duration="8s",                  # 5s maps to 6s, 8s supported
+    image_path="/path/to/frame.png" # Optional for image-to-video
+)
+```
+
+#### Supported Veo Models
+
+1. **veo-3.0-generate-001** (Recommended - Stable)
+   - Audio generation support
+   - Image-to-video capabilities
+   - High quality output
+   - Production ready
+
+2. **veo-3.1-generate-preview** (Preview)
+   - Latest features
+   - Reference images
+   - Video interpolation
+   - May have limited availability
+
+3. **veo-3.0-fast-generate-001** (Stable)
+   - Optimized for speed
+   - Lower latency
+   - Same quality as standard
+
+#### Video Generation Parameters
+
+**Duration Options:**
+- `"5s"` → Automatically mapped to `"6s"` (API supported)
+- `"8s"` → Full 8-second videos
+
+**Aspect Ratios:**
+- `"16:9"` (default, landscape)
+- `"9:16"` (portrait)
+
+**Resolution:**
+- `"720p"` (default)
+- `"1080p"` (8s videos only)
+
+#### Asynchronous Operation
+
+Veo video generation is asynchronous with polling:
+
+```python
+# Start generation
+operation = client.models.generate_videos(model, prompt, config)
+
+# Poll for completion (max 6 minutes)
+while not operation.done:
+    await asyncio.sleep(10)
+    operation = client.operations.get(operation)
+
+# Download result
+video = operation.response.generated_videos[0]
+video_data = client.files.download(file=video.video).read()
+```
+
+**Key Characteristics:**
+- Generation time: 11 seconds to 6 minutes
+- Videos stored for 2 days on Google servers
+- All outputs watermarked with SynthID
+- Automatic fallback to mock mode on errors
+
+#### Image-to-Video
+
+Use approved opening frames as starting images:
+
+```python
+from PIL import Image
+
+# Load starting frame
+image = Image.open("/path/to/opening_frame.png")
+
+# Generate video from image
+operation = client.models.generate_videos(
+    model="veo-3.0-generate-001",
+    prompt="Smooth camera movement, cinematic lighting",
+    image=image,
+    config=types.GenerateVideosConfig(
+        aspect_ratio="16:9",
+        duration_seconds="8"
+    )
+)
+```
+
+#### Mock Video Mode
+
+When Veo API is unavailable, generates animated GIF placeholders:
+- Random gradient colors
+- Smooth transitions
+- 30 FPS playback
+- Marked with `is_mock: true` flag
+
 ## Video Production CLI
 
 ### Architecture
@@ -92,7 +197,7 @@ APIs (Nano Banana/Google Gemini)
 
 1. **`gemini.py`** - Nano Banana API wrapper
    - Image generation via Imagen
-   - Video generation via Veo (planned)
+   - Video generation via Veo 3
    - Automatic mock mode fallback
 
 2. **`batch_service.py`** - Concurrent batch processing

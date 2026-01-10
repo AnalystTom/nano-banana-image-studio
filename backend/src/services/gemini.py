@@ -1,4 +1,5 @@
 import os
+import asyncio
 from PIL import Image
 import io
 import random
@@ -209,53 +210,99 @@ def generate_mock_video(prompt: str, aspect_ratio: str = '16:9', duration: str =
 
 async def generate_video(
     prompt: str,
-    model: str = 'veo-3.0-generate',
+    model: str = 'veo-3.0-generate-001',
     aspect_ratio: str = '16:9',
     duration: str = '5s',
     image_path: str = None
 ) -> dict:
     """
-    Generate a video using Veo API via Nano Banana.
+    Generate a video using Veo 3 API via Nano Banana.
 
     Supports both text-to-video and image-to-video generation.
     Falls back to mock mode if API is unavailable or encounters errors.
 
     Args:
         prompt: Motion prompt describing the video content
-        model: Veo model to use (veo-3.0-generate or veo-2.0-generate)
+        model: Veo model to use (veo-3.0-generate-001, veo-3.1-generate-preview, etc.)
         aspect_ratio: Video aspect ratio (16:9 or 9:16)
         duration: Video duration ('5s' or '8s')
         image_path: Optional path to starting image for image-to-video
+
+    Returns:
+        Dictionary with video_data, duration, text_response, and is_mock flag
     """
 
     if GEMINI_CLIENT:
         try:
-            config = {
-                'duration': duration,
+            from google.genai import types
+            import time
+            from PIL import Image as PILImage
+
+            # Parse duration from '5s'/'8s' to '6'/'8' for API
+            # Veo supports: "4", "6", or "8" seconds
+            duration_seconds = duration.replace('s', '')
+            if duration_seconds == '5':
+                duration_seconds = '6'  # Map 5s to closest supported 6s
+
+            # Prepare configuration
+            config_params = {
                 'aspect_ratio': aspect_ratio,
+                'duration_seconds': duration_seconds,
             }
 
-            # If image path provided, load and include in config
+            # If image path provided, load as PIL Image for image-to-video
+            image_param = None
             if image_path:
-                with open(image_path, 'rb') as f:
-                    image_data = f.read()
-                config['starting_image'] = image_data
+                # Load image file as PIL Image
+                pil_image = PILImage.open(image_path)
+                image_param = pil_image
 
             # Generate video using Veo API
-            response = GEMINI_CLIENT.models.generate_video(
-                model=model,
-                prompt=prompt,
-                config=config
-            )
+            # Note: This is an asynchronous operation that returns an operation object
+            if image_param:
+                # Image-to-video generation
+                operation = GEMINI_CLIENT.models.generate_videos(
+                    model=model,
+                    prompt=prompt,
+                    image=image_param,
+                    config=types.GenerateVideosConfig(**config_params)
+                )
+            else:
+                # Text-to-video generation
+                operation = GEMINI_CLIENT.models.generate_videos(
+                    model=model,
+                    prompt=prompt,
+                    config=types.GenerateVideosConfig(**config_params)
+                )
 
-            if response.generated_videos and len(response.generated_videos) > 0:
-                video = response.generated_videos[0]
+            # Poll for completion (with timeout)
+            max_wait_time = 360  # 6 minutes max
+            poll_interval = 10  # Check every 10 seconds
+            elapsed_time = 0
+
+            while not operation.done and elapsed_time < max_wait_time:
+                print(f"Veo API: Video generation in progress... ({elapsed_time}s elapsed)")
+                await asyncio.sleep(poll_interval)
+                operation = GEMINI_CLIENT.operations.get(operation)
+                elapsed_time += poll_interval
+
+            if operation.done and operation.response:
+                # Download generated video
+                video = operation.response.generated_videos[0]
+
+                # Download video file data
+                video_file = GEMINI_CLIENT.files.download(file=video.video)
+                video_data = video_file.read()
+
                 return {
-                    'video_data': video.video.data,
+                    'video_data': video_data,
                     'duration': duration,
-                    'text_response': f'Video generated successfully via Nano Banana API ({model})',
+                    'text_response': f'Video generated successfully via Veo API ({model})',
                     'is_mock': False
                 }
+            else:
+                raise Exception(f"Video generation timed out after {max_wait_time} seconds")
+
         except Exception as e:
             print(f"Veo API error: {e}. Falling back to mock mode.")
             import traceback
